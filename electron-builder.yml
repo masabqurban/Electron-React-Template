@@ -1,0 +1,76 @@
+# Packaging for Windows, macOS and Linux. https://www.electron.build
+# Placeholder identity: change appId, productName and publish before releasing.
+
+appId: com.example.acmenotes
+productName: Acme Notes
+copyright: Copyright © 2026 Acme
+
+directories:
+  output: release/${version}
+  buildResources: build
+
+files:
+  - out/**
+  - resources/**
+  - package.json
+  - '!**/*.{map,md,ts}'
+
+asar: true
+
+protocols:
+  - name: Acme Notes
+    schemes: [acme-notes]
+
+# --- Windows --------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+  # Signing: set CSC_LINK / CSC_KEY_PASSWORD (a .pfx), or configure
+  # azureSignOptions for Azure Trusted Signing. Unsigned builds still work
+  # but show a SmartScreen warning.
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  deleteAppDataOnUninstall: false
+
+# --- macOS ----------------------------------------------------------------
+mac:
+  target:
+    # zip is required for auto-updates; dmg is what people download.
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  category: public.app-category.productivity
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Signing uses CSC_LINK / CSC_KEY_PASSWORD (a Developer ID .p12).
+  # Notarisation runs automatically when APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD
+  # and APPLE_TEAM_ID are set. Without them the build is unsigned.
+
+dmg:
+  writeUpdateInfo: false
+
+# --- Linux ----------------------------------------------------------------
+linux:
+  target: [AppImage, deb, rpm]
+  category: Office
+  maintainer: Acme <hello@example.com>
+  synopsis: A fast, offline-first notes app.
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+
+# --- Auto-updates ---------------------------------------------------------
+# electron-updater reads releases from here. `npm run release` uploads to a
+# draft release; publish it on GitHub to roll the update out.
+publish:
+  provider: github
+  owner: masabqurban
+  repo: Electron-React-Template
+  releaseType: draft

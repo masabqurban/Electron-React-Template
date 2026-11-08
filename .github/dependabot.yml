@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+      radix-ui:
+        patterns: ['@radix-ui/*']
+      tanstack:
+        patterns: ['@tanstack/*']
+    ignore:
+      # Electron majors ship a new Chromium and Node: upgrade deliberately
+      # (every 8 weeks; each major is supported for three releases).
+      - dependency-name: electron
+        update-types: [version-update:semver-major]
+      # typescript-eslint supports TypeScript up to 6.0.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions:
+        patterns: ['*']

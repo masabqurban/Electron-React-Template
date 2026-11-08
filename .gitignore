@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+
+# Build output
+out
+dist
+release
+
+# Tests
+coverage
+playwright-report
+test-results
+blob-report
+
+# Environment and signing material
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.cer
+*.provisionprofile
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.log
