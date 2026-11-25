@@ -93,3 +93,30 @@ jobs:
           name: playwright-${{ matrix.os }}
           path: test-results
           retention-days: 7
+
+  release-main:
+    name: Update main pre-release
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: installers-*
+          merge-multiple: true
+      - name: Publish rolling main-build pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          NOTES="Automated installers from \`main\` commit \`${SHA::7}\`."
+          if gh release view main-build --repo "$REPO" >/dev/null 2>&1; then
+            gh release upload main-build artifacts/* --repo "$REPO" --clobber
+            gh release edit main-build --repo "$REPO" --prerelease --notes "$NOTES"
+          else
+            gh release create main-build artifacts/* --repo "$REPO" --prerelease --target "$SHA" --title "Latest main build" --notes "$NOTES"
+          fi
