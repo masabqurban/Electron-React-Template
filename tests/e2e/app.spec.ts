@@ -24,11 +24,23 @@ test('creates, edits and finds a note, and keeps it after a restart', async ({ l
   await expect(list(mainWindow).getByRole('link')).toHaveCount(1);
 
   await first.app.close();
-  ({ mainWindow } = await launch());
+  const second = await launch();
+  mainWindow = second.mainWindow;
 
   await expect(list(mainWindow).getByText('Quarterly planning')).toBeVisible();
   await list(mainWindow).getByText('Quarterly planning').click();
   await expect(mainWindow.getByLabel('Note', { exact: true })).toHaveValue('Ship the desktop template');
+
+  // Edit and close immediately (within the 400ms auto-save debounce) to verify flush-before-close.
+  await mainWindow.getByLabel('Note', { exact: true }).fill('Shipped with close flush');
+  const closed = mainWindow.waitForEvent('close');
+  await second.app.evaluate(({ BrowserWindow }) => {
+    BrowserWindow.getAllWindows()[0]?.close();
+  });
+  await closed;
+  ({ mainWindow } = await launch());
+  await list(mainWindow).getByText('Quarterly planning').click();
+  await expect(mainWindow.getByLabel('Note', { exact: true })).toHaveValue('Shipped with close flush');
 });
 
 test('pins and deletes notes', async ({ mainWindow }) => {

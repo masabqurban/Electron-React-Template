@@ -25,6 +25,7 @@ const setup = () => {
     'app.checkForUpdates': () => ({ state: 'idle' }),
     'app.installUpdate': () => ({ ok: true }),
     'app.openExternal': () => ({ ok: true }),
+    'app.confirmClose': () => ({ ok: true }),
   } satisfies Handlers;
 
   return { dispatch: createDispatcher(handlers, logger), logger };

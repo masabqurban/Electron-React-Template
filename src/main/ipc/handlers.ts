@@ -11,13 +11,21 @@ interface Dependencies {
   updater: Updater;
   /** Called after settings change so the main process can react (theme, tray). */
   onSettingsChanged: () => void;
+  /** Called when the renderer finishes flushing pending edits prior to window close. */
+  onConfirmClose: () => void;
 }
 
 /**
  * The implementation of every IPC channel. Handlers receive validated input
  * and talk to the main process through injected dependencies.
  */
-export function createHandlers({ notes, settings, updater, onSettingsChanged }: Dependencies): Handlers {
+export function createHandlers({
+  notes,
+  settings,
+  updater,
+  onSettingsChanged,
+  onConfirmClose,
+}: Dependencies): Handlers {
   return {
     'notes.list': ({ query }) => notes.list(query),
     'notes.get': ({ id }) => notes.get(id),
@@ -52,6 +60,10 @@ export function createHandlers({ notes, settings, updater, onSettingsChanged }: 
     },
     'app.openExternal': async ({ url }) => {
       await shell.openExternal(url);
+      return { ok: true };
+    },
+    'app.confirmClose': () => {
+      onConfirmClose();
       return { ok: true };
     },
   };

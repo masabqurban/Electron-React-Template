@@ -56,6 +56,8 @@ async function start(): Promise<void> {
   let tray: Tray | undefined;
   let isQuitting = false;
   let pendingLink = findDeepLinkArg(process.argv);
+  let closeState: 'open' | 'flushing' | 'confirmed' = 'open';
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
   // macOS delivers links through this event, possibly before the app is ready.
   app.on('open-url', (event, url) => {
@@ -146,20 +148,56 @@ async function start(): Promise<void> {
     onStatus: (status) => send('update.status', status),
   });
 
+  const completeClose = (): void => {
+    if (closeState !== 'flushing') return;
+    if (closeTimer) {
+      clearTimeout(closeTimer);
+      closeTimer = undefined;
+    }
+    closeState = 'confirmed';
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    if (isQuitting) {
+      app.quit();
+    }
+  };
+
   const dispatch = createDispatcher(
-    createHandlers({ notes, settings, updater, onSettingsChanged: applySettings }),
+    createHandlers({ notes, settings, updater, onSettingsChanged: applySettings, onConfirmClose: completeClose }),
     log,
   );
   registerIpcHandlers(dispatch, isTrustedUrl);
 
   function openWindow(): BrowserWindow {
+    closeState = 'open';
     const window = createMainWindow({ settings, devServerUrl, isTrustedUrl, iconPath });
 
     window.on('close', (event) => {
       if (!isQuitting && settings.get().closeToTray) {
         event.preventDefault();
         window.hide();
+        return;
       }
+      if (closeState === 'open' && !window.webContents.isDestroyed() && !window.webContents.isCrashed()) {
+        event.preventDefault();
+        closeState = 'flushing';
+        closeTimer = setTimeout(() => {
+          completeClose();
+        }, 1500);
+        closeTimer.unref();
+        window.webContents.send('app.beforeClose', undefined);
+      } else if (closeState === 'flushing') {
+        event.preventDefault();
+      }
+    });
+
+    window.on('closed', () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+        closeTimer = undefined;
+      }
+      closeState = 'open';
     });
 
     window.webContents.once('did-finish-load', () => {

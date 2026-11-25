@@ -6,7 +6,8 @@ import { Toaster } from 'sonner';
 import { NoteEditor } from '@/features/notes/note-editor';
 import { NotesSidebar } from '@/features/notes/notes-sidebar';
 import { useCreateNote } from '@/features/notes/queries';
-import { IpcError, modKey, subscribe } from '@/lib/ipc';
+import { flushBeforeClose } from '@/lib/close-flush';
+import { call, IpcError, modKey, subscribe } from '@/lib/ipc';
 
 /** The window layout, plus listeners for events from the menu, tray and deep links. */
 export function AppShell() {
@@ -26,9 +27,16 @@ export function AppShell() {
       }
     });
 
+    const offBeforeClose = subscribe('app.beforeClose', () => {
+      void flushBeforeClose().finally(() => {
+        void call('app.confirmClose').catch(() => undefined);
+      });
+    });
+
     return () => {
       offNew();
       offNavigate();
+      offBeforeClose();
     };
   }, [createNote, navigate]);
 

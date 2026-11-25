@@ -14,11 +14,12 @@ export const invokeChannels = [
   'app.checkForUpdates',
   'app.installUpdate',
   'app.openExternal',
+  'app.confirmClose',
 ] as const;
 
 export type InvokeChannel = (typeof invokeChannels)[number];
 
 /** Events the main process pushes to the renderer. */
-export const eventChannels = ['menu.newNote', 'navigate', 'update.status'] as const;
+export const eventChannels = ['menu.newNote', 'navigate', 'update.status', 'app.beforeClose'] as const;
 
 export type EventChannel = (typeof eventChannels)[number];

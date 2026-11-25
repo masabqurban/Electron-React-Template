@@ -57,6 +57,7 @@ export const inputSchemas = {
   'app.openExternal': z.object({
     url: z.url({ protocol: /^https$/ }),
   }),
+  'app.confirmClose': z.undefined(),
 } as const satisfies Record<InvokeChannel, z.ZodType>;
 
 export interface AppInfo {
@@ -92,6 +93,7 @@ export interface Outputs {
   'app.checkForUpdates': UpdateStatus;
   'app.installUpdate': { ok: true };
   'app.openExternal': { ok: true };
+  'app.confirmClose': { ok: true };
 }
 
 /** Routes the main process may send the renderer to. */
@@ -102,6 +104,7 @@ export interface EventPayloads {
   'menu.newNote': undefined;
   navigate: { to: AppPath };
   'update.status': UpdateStatus;
+  'app.beforeClose': undefined;
 }
 
 /** What the renderer sends (before defaults are applied). */

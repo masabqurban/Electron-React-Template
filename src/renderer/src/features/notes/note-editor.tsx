@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { registerCloseFlush } from '@/lib/close-flush';
 import { formatUpdated } from '@/lib/utils';
 
 import { noteQuery, useDeleteNote, useUpdateNote } from './queries';
@@ -27,17 +28,30 @@ export function NoteEditor({ noteId }: { noteId: string }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dirty, setDirty] = useState(false);
   const pending = useRef<{ title?: string; body?: string }>({});
+  const inFlight = useRef<Promise<unknown> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const titleRef = useRef<HTMLInputElement>(null);
 
-  const flush = () => {
+  const flushAsync = async (): Promise<void> => {
     clearTimeout(timer.current);
     const changes = pending.current;
     pending.current = {};
     setDirty(false);
     if (Object.keys(changes).length > 0) {
-      update.mutate({ id: noteId, ...changes });
+      const promise = update.mutateAsync({ id: noteId, ...changes });
+      inFlight.current = promise;
+      try {
+        await promise;
+      } finally {
+        if (inFlight.current === promise) inFlight.current = null;
+      }
+    } else if (inFlight.current) {
+      await inFlight.current.catch(() => undefined);
     }
+  };
+
+  const flush = (): void => {
+    void flushAsync().catch(() => undefined);
   };
 
   const queue = (changes: { title?: string; body?: string }) => {
@@ -47,10 +61,12 @@ export function NoteEditor({ noteId }: { noteId: string }) {
     timer.current = setTimeout(flush, SAVE_DELAY_MS);
   };
 
-  // Save before leaving this note or the page.
+  // Save before leaving this note or closing the window.
   useEffect(() => {
+    const unregister = registerCloseFlush(flushAsync);
     window.addEventListener('beforeunload', flush);
     return () => {
+      unregister();
       window.removeEventListener('beforeunload', flush);
       flush();
     };
