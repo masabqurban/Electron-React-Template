@@ -38,6 +38,8 @@ test('creates, edits and finds a note, and keeps it after a restart', async ({ l
     BrowserWindow.getAllWindows()[0]?.close();
   });
   await closed;
+  // Closing the last window on macOS leaves the app running; quit it before relaunching so the single-instance lock is released.
+  await second.app.close().catch(() => undefined);
   ({ mainWindow } = await launch());
   await list(mainWindow).getByText('Quarterly planning').click();
   await expect(mainWindow.getByLabel('Note', { exact: true })).toHaveValue('Shipped with close flush');
@@ -55,6 +57,7 @@ test('pins and deletes notes', async ({ mainWindow }) => {
 });
 
 test('the New Note menu item creates a note', async ({ app, mainWindow }) => {
+  await expect(list(mainWindow).getByText('Welcome to Acme Notes')).toBeVisible();
   await app.evaluate(({ Menu }) => {
     Menu.getApplicationMenu()?.getMenuItemById('new-note')?.click();
   });
