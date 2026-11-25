@@ -40,7 +40,7 @@ A production-ready **Electron + React + TypeScript** desktop app template for **
 | **Updates**   | electron-updater from GitHub Releases, with in-app status and "Restart and update"                                                      |
 | **Packaging** | electron-builder: NSIS installer (Windows x64/arm64), DMG + ZIP (macOS Intel/Apple Silicon), AppImage, deb and rpm (Linux)              |
 | **Quality**   | Vitest (31 unit tests), Playwright driving the real Electron app (9 e2e tests), type-aware ESLint with process-boundary rules, Prettier |
-| **CI/CD**     | Tests and packages on Windows, macOS and Linux runners; a version tag builds and uploads every installer to a draft GitHub Release      |
+| **CI/CD**     | Tests and builds Windows, macOS and Linux installers automatically on pushes to `main`; version tags publish a draft GitHub Release     |
 
 ## Use this template
 
@@ -229,14 +229,10 @@ npm run package       # installers for the current OS, in release/<version>/
 | macOS   | `.dmg` to download, `.zip` for auto-updates | Intel (x64), Apple Silicon |
 | Linux   | AppImage, `.deb`, `.rpm`                    | x64                        |
 
-Each OS builds its own installers, so CI uses a runner per OS. To release:
+Each OS builds its own installers, so CI uses a runner per OS:
 
-```bash
-npm version minor          # bumps package.json and creates a v* tag
-git push --follow-tags     # the Release workflow builds every installer
-```
-
-The workflow uploads everything to a **draft** GitHub Release. Review it and click **Publish**. Installed apps then find the update through electron-updater, download it in the background, and offer **Restart and update** on the About page (or install it on the next quit).
+- **On every push to `main`:** the **CI** workflow runs unit tests, E2E tests and `electron-builder`, uploading Windows (`.exe`), macOS (`.dmg`, `.zip`) and Linux (`.AppImage`, `.deb`, `.rpm`) installers as downloadable **GitHub Actions artifacts**.
+- **For a GitHub Release:** push a version tag (`npm version minor && git push --follow-tags`) or run the **Release** workflow manually (`workflow_dispatch`). It builds, verifies and uploads every installer plus `latest*.yml` auto-update manifests to a **draft** GitHub Release. Review it and click **Publish** so installed apps pick up updates through `electron-updater`.
 
 ## Code signing
 

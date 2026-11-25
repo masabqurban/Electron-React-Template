@@ -47,20 +47,44 @@ jobs:
       - run: npm ci
 
       # Ubuntu 24.04 restricts unprivileged user namespaces, which Chromium's
-      # sandbox needs; a virtual display stands in for a screen.
+      # sandbox needs; a virtual display stands in for a screen, and rpm builds Linux .rpm packages.
       - name: Prepare Linux
         if: runner.os == 'Linux'
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          sudo apt-get update && sudo apt-get install -y xvfb
+          sudo apt-get update && sudo apt-get install -y xvfb rpm
 
       - name: End-to-end tests
         run: ${{ runner.os == 'Linux' && 'xvfb-run --auto-servernum ' || '' }}npm run test:e2e
 
-      - name: Package (unsigned, no publish)
+      - name: Package unpacked (PR check)
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: npx electron-builder --dir --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Package installers (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: npx electron-builder --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload installers
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          mkdir -p dist-installers
+          find release -maxdepth 2 -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-installers/ \;
+          ls -la dist-installers
+
+      - name: Publish installer artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: dist-installers/*
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload test results
         if: failure()

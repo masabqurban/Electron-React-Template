@@ -26,7 +26,7 @@ win:
   target:
     - target: nsis
       arch: [x64, arm64]
-  artifactName: ${productName}-${version}-win-${arch}.${ext}
+  artifactName: ${name}-${version}-win-${arch}.${ext}
   # Signing: set CSC_LINK / CSC_KEY_PASSWORD (a .pfx), or configure
   # azureSignOptions for Azure Trusted Signing. Unsigned builds still work
   # but show a SmartScreen warning.
@@ -47,7 +47,7 @@ mac:
     - target: zip
       arch: [x64, arm64]
   category: public.app-category.productivity
-  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
@@ -64,7 +64,7 @@ linux:
   category: Office
   maintainer: Acme <hello@example.com>
   synopsis: A fast, offline-first notes app.
-  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
 
 # --- Auto-updates ---------------------------------------------------------
 # electron-updater reads releases from here. `npm run release` uploads to a
