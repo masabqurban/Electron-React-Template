@@ -69,13 +69,19 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Upload installers
+      - name: Stage installers for upload
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           mkdir -p dist-installers
-          find release -maxdepth 2 -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-installers/ \;
+          find release -maxdepth 3 -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-installers/ \;
+          echo "Staged installer files:"
           ls -la dist-installers
+          if [ -z "$(ls -A dist-installers)" ]; then
+            echo "ERROR: No installer files found in release/ directory!" >&2
+            find release -type f | head -20 || echo "(release dir not found)"
+            exit 1
+          fi
 
       - name: Publish installer artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -107,6 +113,16 @@ jobs:
           path: artifacts
           pattern: installers-*
           merge-multiple: true
+      - name: Flatten and verify artifacts
+        run: |
+          mkdir -p dist-upload
+          find artifacts -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.zip' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \) -exec cp {} dist-upload/ \;
+          echo "Files to publish:"
+          ls -la dist-upload
+          if [ -z "$(ls -A dist-upload)" ]; then
+            echo "ERROR: No installer files found to publish!" >&2
+            exit 1
+          fi
       - name: Publish rolling main-build pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,9 +130,12 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           NOTES="Automated installers from \`main\` commit \`${SHA::7}\`."
-          if gh release view main-build --repo "$REPO" >/dev/null 2>&1; then
-            gh release upload main-build artifacts/* --repo "$REPO" --clobber
-            gh release edit main-build --repo "$REPO" --prerelease --notes "$NOTES"
-          else
-            gh release create main-build artifacts/* --repo "$REPO" --prerelease --target "$SHA" --title "Latest main build" --notes "$NOTES"
-          fi
+          # Always delete + recreate so assets are fresh (avoids stale empty-release state)
+          gh release delete main-build --repo "$REPO" --yes 2>/dev/null || true
+          git push --delete origin main-build 2>/dev/null || true
+          gh release create main-build dist-upload/* \
+            --repo "$REPO" \
+            --prerelease \
+            --target "$SHA" \
+            --title "Latest main build ($(date -u +'%Y-%m-%d %H:%M UTC'))" \
+            --notes "$NOTES"
